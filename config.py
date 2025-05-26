@@ -10,7 +10,7 @@ FILENAME = "seen_urls.json"
 TITEL_XPATH = '//*[@id="cont_wrap"]/div[4]/div[2]/div/div[2]/table/tbody/tr[2]/td[3]/a'
 DESC_TITEL_XPATH = '//*[@id="cont_wrap"]/div[2]'
 
-CHANNEL_ID = "587386190" #Поменял 
+CHANNEL_ID = "-1002354540369"
 ALLOWED_USERS = {"prich_x", "FFMFak"}
 
 options = webdriver.ChromeOptions()
@@ -21,7 +21,7 @@ options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
-TOKEN = getenv("BOT_TOKEN") #Поменял 
+TOKEN = getenv("BOT_TOKEN") 
 if not TOKEN:
     raise RuntimeError("Переменная окружения BOT_TOKEN не установлена")
 bot = Bot(token=TOKEN)
