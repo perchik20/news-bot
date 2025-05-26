@@ -19,9 +19,6 @@ def get_ticker():
     
     cursor.execute("SELECT * FROM tickers")
     rows = cursor.fetchall()
-
-    for row in rows:
-        print(row)
         
     conn.close()
     return rows

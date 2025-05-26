@@ -8,18 +8,34 @@ from webdriver_manager.chrome import ChromeDriverManager
 import asyncio
 from collections import deque
 import re
+import json
+import os
 
-from config import options, CHANNEL_ID, DESC_TITEL_XPATH, TITEL_XPATH, bot, log
+from config import options, CHANNEL_ID, DESC_TITEL_XPATH, TITEL_XPATH, bot, log, FILENAME
 
+def load_seen_urls():
+    if os.path.exists(FILENAME):
+        try:
+            with open(FILENAME, "r") as f:
+                data = json.load(f)
+                return deque(data, maxlen=50)
+        except json.JSONDecodeError:
+            # Файл существует, но пуст или повреждён — игнорируем
+            return deque(maxlen=50)
+    return deque(maxlen=50)
 
+def save_seen_urls(seen_urls):
+    with open(FILENAME, "w") as f:
+        json.dump(list(seen_urls), f)
+        
 async def fetch_news(chat_id: int, main_url: str, ticker: str, stop_event: asyncio.Event) -> None:
     main_url = main_url.replace('"', '')
-    seen_urls = deque(maxlen=10)
+    seen_urls = load_seen_urls()
     iteration = 0
     max_iterations = 100
 
     driver = None
-
+    
     while not stop_event.is_set():
         try:
             # Перезапускаем браузер при достижении лимита итераций или если он не был создан
@@ -33,19 +49,23 @@ async def fetch_news(chat_id: int, main_url: str, ticker: str, stop_event: async
             # --- Основная логика ---
             await asyncio.to_thread(driver.get, main_url)
             wait = WebDriverWait(driver, 20)
-
-            elem = await asyncio.to_thread(wait.until, EC.presence_of_element_located((By.XPATH, TITEL_XPATH)))
-            title = elem.text
-            url = await asyncio.to_thread(elem.get_attribute, "href")
+            try:
+                elem = await asyncio.to_thread(wait.until, EC.presence_of_element_located((By.XPATH, TITEL_XPATH)))
+                title = elem.text
+                url = await asyncio.to_thread(elem.get_attribute, "href")
+            except Exception as ex:
+                log.error("Не найден элемент по XPATH. Возможно, изменился путь или страница не загрузилась полностью.", exc_info=ex)
 
             if url and url not in seen_urls:
                 seen_urls.append(url)
+                save_seen_urls(seen_urls)
                 await asyncio.to_thread(driver.get, url)
 
-                elem2 = await asyncio.to_thread(
-                    wait.until,
-                    EC.presence_of_element_located((By.XPATH, DESC_TITEL_XPATH))
-                )
+                try:
+                    elem2 = await asyncio.to_thread(wait.until, EC.presence_of_element_located((By.XPATH, DESC_TITEL_XPATH)))
+                except Exception as ex:
+                    log.error("Не найден элемент по XPATH. Возможно, изменился путь или страница не загрузилась полностью.", exc_info=ex)
+                    
                 full_text = elem2.text
 
                 match = re.search(r'2\. Содержание сообщения(.*?)3\. Подпись', full_text, re.DOTALL)
