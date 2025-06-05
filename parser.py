@@ -50,19 +50,19 @@ async def fetch_news(chat_id: int, main_url: str, ticker: str, stop_event: async
             # --- Основная логика ---
             await asyncio.to_thread(driver.get, main_url)
             wait = WebDriverWait(driver, 20)
-            urls = []
+            urls = {}
             try:
-                for num in range(2, 6):
+                for num in range(6, 2, -1):
                     elem = await asyncio.to_thread(wait.until, EC.presence_of_element_located((By.XPATH, f'//*[@id="cont_wrap"]/div[4]/div[2]/div/div[2]/table/tbody/tr[{num}]/td[3]/a')))
                     title = elem.text
                     url = await asyncio.to_thread(elem.get_attribute, "href")
                     if title in k_w:
-                        urls.append(url)
+                        urls.update({title: url})
             except Exception as ex:
                 log.error("Не найден элемент по XPATH. Возможно, изменился путь или страница не загрузилась полностью.", exc_info=ex)
 
             if urls:
-                for url in urls:
+                for title, url in urls.items():
                     if url and url not in seen_urls:
                         seen_urls.append(url)
                         save_seen_urls(seen_urls)
@@ -79,7 +79,11 @@ async def fetch_news(chat_id: int, main_url: str, ticker: str, stop_event: async
                         if match:
                             content = match.group(1).strip()
                             full_text = f"#{ticker}\n\n{title}\n\n{content}\n\nСсылка на полную новость: {url}"
-                            await bot.send_message(CHANNEL_ID, full_text)
+                            print('-->', len(full_text))
+                            if len(full_text)>4096:
+                                await bot.send_message(CHANNEL_ID, f'{full_text[0:3984]}\n\nСсылка на полную новость:{url}')
+                            else:
+                                await bot.send_message(CHANNEL_ID, full_text)
                         else:
                             print("Не удалось найти нужный фрагмент.")
             else:
