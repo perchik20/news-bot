@@ -11,7 +11,7 @@ import re
 import json
 import os
 
-from config import options, CHANNEL_ID, DESC_TITEL_XPATH, bot, log, FILENAME, DEBUG_ID
+from config import options, DESC_TITEL_XPATH, bot, log, FILENAME, DEBUG_ID
 from key_words import k_w
 from db_funcs import get_users_by_chatid
 
@@ -45,13 +45,14 @@ async def fetch_news(chat_id: int, main_url: str, ticker: str, stop_event: async
             if driver is None or iteration >= max_iterations:
                 if driver:
                     await asyncio.to_thread(driver.quit)
-                service = Service(ChromeDriverManager().install())
+                # service = Service(ChromeDriverManager().install())
+                service = Service("/usr/local/bin/chromedriver")
                 driver = webdriver.Chrome(service=service, options=options)
                 iteration = 0
 
             # --- Основная логика ---
             await asyncio.to_thread(driver.get, main_url)
-            wait = WebDriverWait(driver, 40)
+            wait = WebDriverWait(driver, 50)
             urls = {}
             try:
                 for num in range(6, 2, -1):

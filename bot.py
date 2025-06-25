@@ -277,9 +277,10 @@ async def handle_custom_list_companies(callback: CallbackQuery):
 
 @dp.message(F.text)
 async def handle_company_message(message: types.Message):
+    global is_running
+    
     user = message.from_user
 
-    # Проверка, разрешён ли пользователь
     if user.username not in ALLOWED_USERS:
         await message.answer("У вас нет прав для отправки данных.")
         return
@@ -297,9 +298,11 @@ async def handle_company_message(message: types.Message):
             await message.answer(f"Тикер: {ticker} уже существует")
         
         await message.answer(f"Принято:\nТикер: #{ticker}\nСсылка: {link}")
-        print(">> Запуск от", chat_id)
-        await restart_news_tasks(chat_id)
-        await message.answer("🔄 Парсер новостей перезапущен.")
+        if is_running:
+            print(">> Запуск от", chat_id)
+            await restart_news_tasks(chat_id)
+            await message.answer("🔄 Парсер новостей перезапущен.")
+
     else:
         await message.answer(
             "Неверный формат.\nПример:\nКомпания: #SVCB - https://example.com"
