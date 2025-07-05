@@ -39,14 +39,14 @@ async def fetch_news(chat_id: int, main_url: str, ticker: str, stop_event: async
     driver = None
     
     while not stop_event.is_set():
-        print(main_url, iteration)
+        # print(main_url, iteration)
         try:
             # Перезапускаем браузер при достижении лимита итераций или если он не был создан
             if driver is None or iteration >= max_iterations:
                 if driver:
                     await asyncio.to_thread(driver.quit)
-                # service = Service(ChromeDriverManager().install())
-                service = Service("/usr/local/bin/chromedriver")
+                service = Service(ChromeDriverManager().install())
+                # service = Service("/usr/local/bin/chromedriver")
                 driver = webdriver.Chrome(service=service, options=options)
                 iteration = 0
 
@@ -55,13 +55,14 @@ async def fetch_news(chat_id: int, main_url: str, ticker: str, stop_event: async
             wait = WebDriverWait(driver, 50)
             urls = {}
             try:
-                for num in range(6, 2, -1):
+                for num in range(6, 1, -1):
                     xpath = f'//*[@id="cont_wrap"]/div[4]/div[2]/div/div[2]/table/tbody/tr[{num}]/td[3]/a'
                     elem = await asyncio.to_thread(wait.until, EC.presence_of_element_located((By.XPATH, xpath)))
                     
                     title = elem.text
-                    url = await asyncio.to_thread(elem.get_attribute, "href")
                     
+                    url = await asyncio.to_thread(elem.get_attribute, "href")
+                    print(f'---------\n{ticker}\nNews {num} - title {title} - link {url}')
                     if url and title in k_w and url not in seen_urls:
                         # print('{', f'{title}: {url}', '}')
                         urls.update({title: url})
@@ -94,7 +95,7 @@ async def fetch_news(chat_id: int, main_url: str, ticker: str, stop_event: async
                         if match:
                             content = match.group(1).strip()
                             full_text = f"#{ticker}\n\n{title}\n\n{content}\n\nСсылка на полную новость: {url}"
-                            
+                            print(full_text)
                             print(ticker)
                             for user_id in set(get_users_by_chatid(ticker)):
                                 print(user_id)

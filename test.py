@@ -1,116 +1,136 @@
 
-### ------------------------------ 1️⃣ Парсер файлов отчетности ------------------------------ ###
+### ------------------------------ 1️⃣ Парсер новостей ТАСС (economics) ------------------------------ ###
 
-# import os
-# import requests
-# from io import BytesIO
-# import zipfile
 # from selenium import webdriver
 # from selenium.webdriver.common.by import By
-# from selenium.webdriver.chrome.service import Service
 # from selenium.webdriver.support.ui import WebDriverWait
 # from selenium.webdriver.support import expected_conditions as EC
+# from selenium.webdriver.chrome.service import Service
 # from webdriver_manager.chrome import ChromeDriverManager
 
-# # --- Настройки ---
-# page_url = 'https://e-disclosure.ru/portal/files.aspx?id=30052&type=4'  # ← замените на настоящий URL
-# # xpath = '//*[@id="cont_wrap"]/div[2]/table/tbody/tr[2]/td[6]/a'
-# save_folder = 'reports'
+# from config import options
 
-# # Создаём папку, если её нет
-# os.makedirs(save_folder, exist_ok=True)
+# import time
+# import hashlib
 
-# for num in range (2, 6):
-#     # --- Selenium: получить ссылку ---
-#     options = webdriver.ChromeOptions()
-#     # options.add_argument('--headless')
-#     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-#     driver.get(page_url)
+# SEEN = set()
+# CHECK_INTERVAL = 5  # Проверка каждую минуту
 
-#     wait = WebDriverWait(driver, 10)
-#     link_element = wait.until(EC.presence_of_element_located((By.XPATH, f'//*[@id="cont_wrap"]/div[2]/table/tbody/tr[{num}]/td[6]/a')))
-#     file_url = link_element.get_attribute('href')
-
-#     from urllib.parse import urljoin
-#     file_url = urljoin(page_url, file_url)
-#     driver.quit()
-
-#     # --- Скачивание ZIP в память ---
-#     response = requests.get(file_url)
-#     zip_bytes = BytesIO(response.content)
-
-#     # --- Извлечение PDF из архива ---
-#     with zipfile.ZipFile(zip_bytes) as zip_file:
-#         pdf_name = next(name for name in zip_file.namelist() if name.lower().endswith('.pdf'))
-#         pdf_bytes = zip_file.read(pdf_name)  # читаем в память
-
-#         # Путь сохранения
-#         save_path = os.path.join(save_folder, os.path.basename(pdf_name))
-
-#         # Сохраняем PDF
-#         with open(save_path, 'wb') as f:
-#             f.write(pdf_bytes)
-
-#     print(f"✅ PDF-файл сохранён: {save_path}")
+# service = Service(ChromeDriverManager().install())
+# driver = webdriver.Chrome(service=service, options=options)
 
 
-### ------------------------------ 2️⃣ Парсер новостей ТАСС (economics) ------------------------------ ###
+# def fetch_news(driver):
+#     print('1')
+#     driver.get("https://tass.ru/ekonomika")
+#     wait = WebDriverWait(driver, 40)
+#     print('2')
+#     articles = driver.find_elements(By.XPATH, '//*[@id="infinite_listing"]/a[1]/div[1]/div/div[1]/span/text()')
+#     print('--->>>', articles)
+#     news = []
 
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
+#     for item in articles:
+#         try:
+#             title = item.text.strip()
+#             link = item.get_attribute("href")
+#             uid = hashlib.md5(link.encode()).hexdigest()
+#             news.append({"uid": uid, "title": title, "link": link})
+#         except Exception as e:
+#             continue
 
-from config import options
+#     return news
 
-import time
-import hashlib
+# def main():
+#     print("🚀 Запущен парсер TASS (через Selenium)")
 
-SEEN = set()
-CHECK_INTERVAL = 5  # Проверка каждую минуту
+#     try:
+#         while True:
+#             news_items = fetch_news(driver)
+#             for news in news_items:
+#                 if news["uid"] not in SEEN:
+#                     SEEN.add(news["uid"])
+#                     print(f"🆕 {news['title']}\n{news['link']}\n")
+#                     # send_to_bot(news['title'], news['link'])
+#             time.sleep(CHECK_INTERVAL)
+#     except KeyboardInterrupt:
+#         print("🛑 Остановлено пользователем.")
+#     finally:
+#         driver.quit()
 
-service = Service(ChromeDriverManager().install())
-driver = webdriver.Chrome(service=service, options=options)
+# if __name__ == "__main__":
+#     main()
 
+### ------------------------------ 2️⃣ Работа с API Мосбиржы (объем за сутки) ------------------------------ ###
 
-def fetch_news(driver):
-    print('1')
-    driver.get("https://tass.ru/ekonomika")
-    wait = WebDriverWait(driver, 40)
-    print('2')
-    articles = driver.find_elements(By.XPATH, '//*[@id="infinite_listing"]/a[1]/div[1]/div/div[1]/span/text()')
-    print('--->>>', articles)
-    news = []
+# import requests
+# import pandas as pd
+# from datetime import datetime, timedelta
 
-    for item in articles:
-        try:
-            title = item.text.strip()
-            link = item.get_attribute("href")
-            uid = hashlib.md5(link.encode()).hexdigest()
-            news.append({"uid": uid, "title": title, "link": link})
-        except Exception as e:
-            continue
+# def get_security_volumes(ticker: str, board='TQBR', limit=10):
+#     """
+#     Получить объемы торгов за последние дни по бумаге с MOEX.
+    
+#     :param ticker: тикер бумаги (например, 'SBER')
+#     :param board: режим торгов (по умолчанию TQBR — основной рынок)
+#     :param limit: сколько последних дней получить
+#     :return: pandas DataFrame с датами и объемами
+#     """
+    
+#     from_date = (datetime.now() - timedelta(days=10)).strftime('%Y-%m-%d')
+    
+#     url = f"https://iss.moex.com/iss/history/engines/stock/markets/shares/boards/{board}/securities/{ticker}.json"
+#     params = {
+#         'iss.meta': 'off',
+#         'from': from_date,  # можно указать дату начала, если нужно
+#         'start': 0,
+#         'limit': limit
+#     }
 
-    return news
+#     response = requests.get(url, params=params)
+#     response.raise_for_status()
+#     data = response.json()
 
-def main():
-    print("🚀 Запущен парсер TASS (через Selenium)")
+#     # Распаковываем таблицу 'history'
+#     columns = data['history']['columns']
+#     rows = data['history']['data']
 
+#     df = pd.DataFrame(rows, columns=columns)
+#     print(df)
+#     df = df[['TRADEDATE', 'VOLUME', 'TRENDCLSPR']]
+#     return df
+
+# # Пример использования
+# df = get_security_volumes('SBER', limit=5)
+# print(df)
+
+### ------------------------------ 3️⃣ Работа с API Мосбиржы (стакан)) ------------------------------ ###
+
+import requests
+
+def get_orderbook(ticker: str, depth: int = 10):
+    base_url = "https://iss.moex.com/iss/engines/stock/markets/shares/boards/TQBR/securities"
+    url = f"{base_url}/{ticker}/orderbook.json?depth={depth}"
+    
     try:
-        while True:
-            news_items = fetch_news(driver)
-            for news in news_items:
-                if news["uid"] not in SEEN:
-                    SEEN.add(news["uid"])
-                    print(f"🆕 {news['title']}\n{news['link']}\n")
-                    # send_to_bot(news['title'], news['link'])
-            time.sleep(CHECK_INTERVAL)
-    except KeyboardInterrupt:
-        print("🛑 Остановлено пользователем.")
-    finally:
-        driver.quit()
+        response = requests.get(url)
+        
+        # Выводим диагностическую информацию
+        print(f"HTTP статус: {response.status_code}")
+        print(f"URL запроса: {url}")
+        print(f"Ответ (первые 300 символов): {response.text[:300]}")
+        
+        response.raise_for_status()
+        data = response.json()
 
-if __name__ == "__main__":
-    main()
+        bids = data['orderbook']['bids']
+        offers = data['orderbook']['offers']
+
+        return {
+            'ticker': ticker,
+            'bids': bids,
+            'offers': offers
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+

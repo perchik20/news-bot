@@ -1,6 +1,7 @@
 from selenium import webdriver
 from os import getenv
 from aiogram import Bot, Dispatcher
+import tempfile
 
 import logging
 from logging.handlers import RotatingFileHandler
@@ -14,12 +15,14 @@ CHANNEL_ID = "587386190" #Поменял
 DEBUG_ID = "587386190"
 ALLOWED_USERS = {"prich_x", "FFMFak"}
 
+# tmp_profile = tempfile.mkdtemp()
 options = webdriver.ChromeOptions()
 # options.add_argument("--headless")
 options.add_argument("--window-size=1920x1080")
 options.add_argument("--disable-gpu")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
+# options.add_argument(f"--user-data-dir={tmp_profile}")
 options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
 TOKEN = getenv("BOT_TOKEN") #Поменял
